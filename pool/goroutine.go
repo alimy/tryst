@@ -22,71 +22,13 @@ type GoroutinePool[T, R any] interface {
 // GorotinePoolOptFn groutine pool option help function used to create groutine pool instance
 type GorotinePoolOptFn = func(opt *gorotinePoolOpt)
 
-// MinWorkerOpt set min worker
-func MinWorkerOpt(num int) GorotinePoolOptFn {
-	return func(opt *gorotinePoolOpt) {
-		opt.MinWorker = num
-	}
-}
-
-// MaxRequestBuffer set max request buffer size
-func MaxRequestBuffer(num int) GorotinePoolOptFn {
-	return func(opt *gorotinePoolOpt) {
-		opt.MaxRequestInCh = num
-	}
-}
-
-// MaxRequestTempBuffer set max request temp buffer size
-func MaxRequestTempBuffer(num int) GorotinePoolOptFn {
-	return func(opt *gorotinePoolOpt) {
-		opt.MaxRequestInTempCh = num
-	}
-}
-
-// MaxTickCount set max tick count
-func MaxTickCount(num int) GorotinePoolOptFn {
-	return func(opt *gorotinePoolOpt) {
-		opt.MaxTickCount = num
-	}
-}
-
-// TickWaitTime set tick wait time
-func TickWaitTime(duration time.Duration) GorotinePoolOptFn {
-	return func(opt *gorotinePoolOpt) {
-		opt.TickWaitTime = duration
-	}
-}
-
-// NewGoroutinePool[T, R] create a new GoroutinePool[T, R] instance
-func NewGoroutinePool[T, R any](fn GoFn[T, R], opts ...GorotinePoolOptFn) GoroutinePool[T, R] {
-	opt := &gorotinePoolOpt{
-		MinWorker:          10,
-		MaxRequestInCh:     100,
-		MaxRequestInTempCh: 100,
-		MaxTickCount:       60,
-		TickWaitTime:       time.Second,
-	}
-	for _, optFn := range opts {
-		optFn(opt)
-	}
-	p := &wormPool[T, R]{
-		requestCh:     make(chan *requestItem[T, R], opt.MaxRequestInCh),
-		requestTempCh: make(chan *requestItem[T, R], opt.MaxRequestInTempCh),
-		maxTickCount:  opt.MaxTickCount,
-		tickWaitTime:  opt.TickWaitTime,
-		goFn:          fn,
-	}
-	p.startDoWork()
-	return p
-}
-
 // grotinePoolOpt gorotine pool option used to create gorotine pool instance
 type gorotinePoolOpt struct {
-	MinWorker          int
-	MaxRequestInCh     int
-	MaxRequestInTempCh int
-	MaxTickCount       int
-	TickWaitTime       time.Duration
+	minWorker          int
+	maxRequestInCh     int
+	maxRequestInTempCh int
+	maxTickCount       int
+	tickWaitTime       time.Duration
 }
 
 type requestItem[T, R any] struct {
@@ -149,4 +91,63 @@ func (p *wormPool[T, R]) goDo() {
 	for item := range p.requestCh {
 		p.do(item)
 	}
+}
+
+// MinWorkerOpt set min worker
+func MinWorkerOpt(num int) GorotinePoolOptFn {
+	return func(opt *gorotinePoolOpt) {
+		opt.minWorker = num
+	}
+}
+
+// MaxRequestBufOpt set max request buffer size
+func MaxRequestBufOpt(num int) GorotinePoolOptFn {
+	return func(opt *gorotinePoolOpt) {
+		opt.maxRequestInCh = num
+	}
+}
+
+// MaxRequestTempBufOpt set max request temp buffer size
+func MaxRequestTempBufOpt(num int) GorotinePoolOptFn {
+	return func(opt *gorotinePoolOpt) {
+		opt.maxRequestInTempCh = num
+	}
+}
+
+// MaxTickCountOpt set max tick count
+func MaxTickCountOpt(num int) GorotinePoolOptFn {
+	return func(opt *gorotinePoolOpt) {
+		opt.maxTickCount = num
+	}
+}
+
+// TickWaitTimeOpt set tick wait time
+func TickWaitTimeOpt(duration time.Duration) GorotinePoolOptFn {
+	return func(opt *gorotinePoolOpt) {
+		opt.tickWaitTime = duration
+	}
+}
+
+// NewGoroutinePool[T, R] create a new GoroutinePool[T, R] instance
+func NewGoroutinePool[T, R any](fn GoFn[T, R], opts ...GorotinePoolOptFn) GoroutinePool[T, R] {
+	opt := &gorotinePoolOpt{
+		minWorker:          10,
+		maxRequestInCh:     100,
+		maxRequestInTempCh: 100,
+		maxTickCount:       60,
+		tickWaitTime:       time.Second,
+	}
+	for _, optFn := range opts {
+		optFn(opt)
+	}
+	p := &wormPool[T, R]{
+		requestCh:     make(chan *requestItem[T, R], opt.maxRequestInCh),
+		requestTempCh: make(chan *requestItem[T, R], opt.maxRequestInTempCh),
+		minWorker:     opt.minWorker,
+		maxTickCount:  opt.maxTickCount,
+		tickWaitTime:  opt.tickWaitTime,
+		goFn:          fn,
+	}
+	p.startDoWork()
+	return p
 }

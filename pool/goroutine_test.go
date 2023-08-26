@@ -6,8 +6,28 @@ package pool
 
 import (
 	"testing"
+	"time"
 )
 
-func TestGoroutinePool(t *testing.T) {
-	// TODO: just a placeholder
+func TestGoroutinePoolOpt(t *testing.T) {
+	expectOpt := gorotinePoolOpt{
+		minWorker:          10,
+		maxRequestInCh:     100,
+		maxRequestInTempCh: 100,
+		maxTickCount:       60,
+		tickWaitTime:       time.Second,
+	}
+	opt := gorotinePoolOpt{}
+	for _, optFn := range []GorotinePoolOptFn{
+		MinWorkerOpt(10),
+		MaxRequestBufOpt(100),
+		MaxRequestTempBufOpt(100),
+		MaxTickCountOpt(60),
+		TickWaitTimeOpt(time.Second),
+	} {
+		optFn(&opt)
+	}
+	if opt != expectOpt {
+		t.Errorf("want %+v but got %+v", expectOpt, opt)
+	}
 }
