@@ -14,4 +14,5 @@ test:
 
 .PHONY: fmt
 fmt:
-	$(GOFMT) $(GOFILES)
+	@echo source formatting...
+	@$(GOFMT) $(GOFILES)
