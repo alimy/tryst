@@ -5,6 +5,7 @@
 package pool
 
 import (
+	"sync/atomic"
 	"time"
 )
 
@@ -17,6 +18,8 @@ type GoFn[T, R any] func(req T) (R, error)
 // GoroutinePool[T, R] goroutine pool interface
 type GoroutinePool[T, R any] interface {
 	Do(T, ResponseFn[T, R])
+	Start()
+	Stop()
 }
 
 // GorotinePoolOptFn groutine pool option help function used to create groutine pool instance
@@ -37,12 +40,15 @@ type requestItem[T, R any] struct {
 }
 
 type wormPool[T, R any] struct {
-	requestCh     chan *requestItem[T, R] // 正式工 缓存通道
-	requestTempCh chan *requestItem[T, R] // 临时工 缓存通道
-	minWorker     int                     // 最少正式工数
-	maxTickCount  int
-	tickWaitTime  time.Duration
-	goFn          GoFn[T, R]
+	isStarted          atomic.Bool
+	requestCh          chan *requestItem[T, R] // 正式工 缓存通道
+	requestTempCh      chan *requestItem[T, R] // 临时工 缓存通道
+	maxRequestInCh     int
+	maxRequestInTempCh int
+	minWorker          int // 最少正式工数
+	maxTickCount       int
+	tickWaitTime       time.Duration
+	goFn               GoFn[T, R]
 }
 
 func (p *wormPool[T, R]) Do(req T, fn ResponseFn[T, R]) {
@@ -75,16 +81,26 @@ func (p *wormPool[T, R]) Do(req T, fn ResponseFn[T, R]) {
 	}
 }
 
+func (p *wormPool[T, R]) Start() {
+	if !p.isStarted.Swap(true) {
+		p.requestCh = make(chan *requestItem[T, R], p.maxRequestInCh)
+		p.requestTempCh = make(chan *requestItem[T, R], p.maxRequestInTempCh)
+		for numWorker := p.minWorker; numWorker > 0; numWorker-- {
+			go p.goDo()
+		}
+	}
+}
+
+func (p *wormPool[T, R]) Stop() {
+	if p.isStarted.Swap(false) {
+		close(p.requestCh)
+		close(p.requestTempCh)
+	}
+}
+
 func (p *wormPool[T, R]) do(item *requestItem[T, R]) {
 	resp, err := p.goFn(item.req)
 	item.respFn(item.req, resp, err)
-}
-
-// startDoWork start do work
-func (p *wormPool[T, R]) startDoWork() {
-	for numWorker := p.minWorker; numWorker > 0; numWorker-- {
-		go p.goDo()
-	}
 }
 
 func (p *wormPool[T, R]) goDo() {
@@ -141,13 +157,13 @@ func NewGoroutinePool[T, R any](fn GoFn[T, R], opts ...GorotinePoolOptFn) Gorout
 		optFn(opt)
 	}
 	p := &wormPool[T, R]{
-		requestCh:     make(chan *requestItem[T, R], opt.maxRequestInCh),
-		requestTempCh: make(chan *requestItem[T, R], opt.maxRequestInTempCh),
-		minWorker:     opt.minWorker,
-		maxTickCount:  opt.maxTickCount,
-		tickWaitTime:  opt.tickWaitTime,
-		goFn:          fn,
+		maxRequestInCh:     opt.maxRequestInCh,
+		maxRequestInTempCh: opt.maxRequestInTempCh,
+		minWorker:          opt.minWorker,
+		maxTickCount:       opt.maxTickCount,
+		tickWaitTime:       opt.tickWaitTime,
+		goFn:               fn,
 	}
-	p.startDoWork()
+	p.Start()
 	return p
 }
