@@ -51,7 +51,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       - name: Run tests
-        run: go test -v -race ./...
+        run: make test
       
   # Running tests with race detection consumes too much memory on Windows,
   # see https://github.com/golang/go/issues/46099 for details.
@@ -70,4 +70,4 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       - name: Run tests
-        run: go test -v ./...
+        run: make test

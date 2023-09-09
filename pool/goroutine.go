@@ -195,12 +195,16 @@ func (p *wormPool2[T]) Stop() {
 }
 
 func (p *wormPool[T, R]) do(item *requestItem[T, R]) {
-	resp, err := p.doFn(item.req)
-	item.respFn(item.req, resp, err)
+	if item != nil {
+		resp, err := p.doFn(item.req)
+		item.respFn(item.req, resp, err)
+	}
 }
 
 func (p *wormPool2[T]) run(item *requestItem2[T]) {
-	item.respFn(item.req, p.runFn(item.req))
+	if item != nil {
+		item.respFn(item.req, p.runFn(item.req))
+	}
 }
 
 func (p *wormPool[T, R]) goDo() {
@@ -208,9 +212,7 @@ For:
 	for {
 		select {
 		case item := <-p.requestCh:
-			if item != nil {
-				p.do(item)
-			}
+			p.do(item)
 		case <-p.ctx.Done():
 			break For
 		}
@@ -222,9 +224,7 @@ For:
 	for {
 		select {
 		case item := <-p.requestCh:
-			if item != nil {
-				p.run(item)
-			}
+			p.run(item)
 		case <-p.ctx.Done():
 			break For
 		}
