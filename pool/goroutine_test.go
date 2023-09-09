@@ -18,7 +18,7 @@ func TestGoroutinePoolOpt(t *testing.T) {
 		tickWaitTime:       time.Second,
 	}
 	opt := gorotinePoolOpt{}
-	for _, optFn := range []GorotinePoolOptFn{
+	for _, optFn := range []Option{
 		MinWorkerOpt(10),
 		MaxRequestBufOpt(100),
 		MaxRequestTempBufOpt(100),

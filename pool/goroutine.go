@@ -35,8 +35,8 @@ type GoroutinePool2[T any] interface {
 	Run(T, RespFn[T])
 }
 
-// GorotinePoolOptFn groutine pool option help function used to create groutine pool instance
-type GorotinePoolOptFn = func(opt *gorotinePoolOpt)
+// Option groutine pool option help function used to create groutine pool instance
+type Option = func(opt *gorotinePoolOpt)
 
 // grotinePoolOpt gorotine pool option used to create gorotine pool instance
 type gorotinePoolOpt struct {
@@ -197,42 +197,42 @@ func (p *wormPool2[T]) goRun() {
 }
 
 // MinWorkerOpt set min worker
-func MinWorkerOpt(num int) GorotinePoolOptFn {
+func MinWorkerOpt(num int) Option {
 	return func(opt *gorotinePoolOpt) {
 		opt.minWorker = num
 	}
 }
 
 // MaxRequestBufOpt set max request buffer size
-func MaxRequestBufOpt(num int) GorotinePoolOptFn {
+func MaxRequestBufOpt(num int) Option {
 	return func(opt *gorotinePoolOpt) {
 		opt.maxRequestInCh = num
 	}
 }
 
 // MaxRequestTempBufOpt set max request temp buffer size
-func MaxRequestTempBufOpt(num int) GorotinePoolOptFn {
+func MaxRequestTempBufOpt(num int) Option {
 	return func(opt *gorotinePoolOpt) {
 		opt.maxRequestInTempCh = num
 	}
 }
 
 // MaxTickCountOpt set max tick count
-func MaxTickCountOpt(num int) GorotinePoolOptFn {
+func MaxTickCountOpt(num int) Option {
 	return func(opt *gorotinePoolOpt) {
 		opt.maxTickCount = num
 	}
 }
 
 // TickWaitTimeOpt set tick wait time
-func TickWaitTimeOpt(duration time.Duration) GorotinePoolOptFn {
+func TickWaitTimeOpt(duration time.Duration) Option {
 	return func(opt *gorotinePoolOpt) {
 		opt.tickWaitTime = duration
 	}
 }
 
 // NewGoroutinePool[T, R] create a new GoroutinePool[T, R] instance
-func NewGoroutinePool[T, R any](fn GoFn[T, R], opts ...GorotinePoolOptFn) GoroutinePool[T, R] {
+func NewGoroutinePool[T, R any](fn GoFn[T, R], opts ...Option) GoroutinePool[T, R] {
 	opt := &gorotinePoolOpt{
 		minWorker:          10,
 		maxRequestInCh:     100,
@@ -256,7 +256,7 @@ func NewGoroutinePool[T, R any](fn GoFn[T, R], opts ...GorotinePoolOptFn) Gorout
 }
 
 // NewGoroutinePool2[T] create a new GoroutinePool[T, R] instance
-func NewGoroutinePool2[T any](fn RunFn[T], opts ...GorotinePoolOptFn) GoroutinePool2[T] {
+func NewGoroutinePool2[T any](fn RunFn[T], opts ...Option) GoroutinePool2[T] {
 	opt := &gorotinePoolOpt{
 		minWorker:          10,
 		maxRequestInCh:     100,
