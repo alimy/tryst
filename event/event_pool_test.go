@@ -47,8 +47,8 @@ func TestEventManager(t *testing.T) {
 		evt := &fakeEvent{count: 1}
 		em.OnEvent(evt)
 	}
+	time.Sleep(3 * time.Second)
 	em.Stop()
-	time.Sleep(5 * time.Second)
 	if count := totalCount.Load(); count != 100 {
 		t.Errorf("expect total count equel 100 but got %d", count)
 	}
@@ -57,8 +57,8 @@ func TestEventManager(t *testing.T) {
 		evt := &fakeEvent{count: 1}
 		em.OnEvent(evt)
 	}
+	time.Sleep(3 * time.Second)
 	em.Stop()
-	time.Sleep(5 * time.Second)
 	if count := totalCount.Load(); count != 200 {
 		t.Errorf("expect total count equel 200 but got %d", count)
 	}
@@ -72,8 +72,8 @@ func TestEventManager2(t *testing.T) {
 		evt := &fakeEvent2{count: 1}
 		em.OnEvent(evt)
 	}
+	time.Sleep(3 * time.Second)
 	em.Stop()
-	time.Sleep(5 * time.Second)
 	if count := totalCount2.Load(); count != 100 {
 		t.Errorf("expect total count equel 100 but got %d", count)
 	}
@@ -82,8 +82,8 @@ func TestEventManager2(t *testing.T) {
 		evt := &fakeEvent2{count: 1}
 		em.OnEvent(evt)
 	}
+	time.Sleep(3 * time.Second)
 	em.Stop()
-	time.Sleep(5 * time.Second)
 	if count := totalCount2.Load(); count != 200 {
 		t.Errorf("expect total count equel 200 but got %d", count)
 	}

@@ -5,6 +5,7 @@
 package pool
 
 import (
+	"context"
 	"sync/atomic"
 	"time"
 )
@@ -12,8 +13,8 @@ import (
 // ResponseFn[T, R] response handle function
 type ResponseFn[T, R any] func(req T, resp R, err error)
 
-// GoFn[T, R] request handle function
-type GoFn[T, R any] func(req T) (R, error)
+// DoFn[T, R] request handle function
+type DoFn[T, R any] func(req T) (R, error)
 
 // GoroutinePool[T, R] goroutine pool interface
 type GoroutinePool[T, R any] interface {
@@ -58,6 +59,7 @@ type requestItem2[T any] struct {
 }
 
 type wormPool[T, R any] struct {
+	ctx                context.Context
 	isStarted          atomic.Bool
 	requestCh          chan *requestItem[T, R] // 正式工 缓存通道
 	requestTempCh      chan *requestItem[T, R] // 临时工 缓存通道
@@ -66,10 +68,12 @@ type wormPool[T, R any] struct {
 	minWorker          int // 最少正式工数
 	maxTickCount       int
 	tickWaitTime       time.Duration
-	goFn               GoFn[T, R]
+	doFn               DoFn[T, R]
+	cancelFn           context.CancelFunc
 }
 
 type wormPool2[T any] struct {
+	ctx                context.Context
 	isStarted          atomic.Bool
 	requestCh          chan *requestItem2[T] // 正式工 缓存通道
 	requestTempCh      chan *requestItem2[T] // 临时工 缓存通道
@@ -79,6 +83,7 @@ type wormPool2[T any] struct {
 	maxTickCount       int
 	tickWaitTime       time.Duration
 	runFn              RunFn[T]
+	cancelFn           context.CancelFunc
 }
 
 func (p *wormPool[T, R]) Do(req T, fn ResponseFn[T, R]) {
@@ -86,6 +91,8 @@ func (p *wormPool[T, R]) Do(req T, fn ResponseFn[T, R]) {
 	select {
 	case p.requestCh <- item:
 		// send request item by requestCh chan
+	case <-p.ctx.Done():
+		// do nothing
 	default:
 		select {
 		case p.requestTempCh <- item:
@@ -95,12 +102,15 @@ func (p *wormPool[T, R]) Do(req T, fn ResponseFn[T, R]) {
 				p.do(item)
 				// watch requestTempCh to continue do work if needed.
 				// cancel loop if no item had watched in s.maxTickCount * s.tickWaitTime.
+			For:
 				for count := 0; count < p.maxTickCount; count++ {
 					select {
 					case item := <-p.requestTempCh:
 						// reset count to continue do work
 						count = 0
 						p.do(item)
+					case <-p.ctx.Done():
+						break For
 					default:
 						// sleeping to wait request item pass over to do work
 						time.Sleep(p.tickWaitTime)
@@ -116,6 +126,8 @@ func (p *wormPool2[T]) Run(req T, fn RespFn[T]) {
 	select {
 	case p.requestCh <- item:
 		// send request item by requestCh chan
+	case <-p.ctx.Done():
+		// do nothing
 	default:
 		select {
 		case p.requestTempCh <- item:
@@ -125,12 +137,15 @@ func (p *wormPool2[T]) Run(req T, fn RespFn[T]) {
 				p.run(item)
 				// watch requestTempCh to continue do work if needed.
 				// cancel loop if no item had watched in s.maxTickCount * s.tickWaitTime.
+			For:
 				for count := 0; count < p.maxTickCount; count++ {
 					select {
 					case item := <-p.requestTempCh:
 						// reset count to continue do work
 						count = 0
 						p.run(item)
+					case <-p.ctx.Done():
+						break For
 					default:
 						// sleeping to wait request item pass over to do work
 						time.Sleep(p.tickWaitTime)
@@ -143,6 +158,7 @@ func (p *wormPool2[T]) Run(req T, fn RespFn[T]) {
 
 func (p *wormPool[T, R]) Start() {
 	if !p.isStarted.Swap(true) {
+		p.ctx, p.cancelFn = context.WithCancel(context.Background())
 		p.requestCh = make(chan *requestItem[T, R], p.maxRequestInCh)
 		p.requestTempCh = make(chan *requestItem[T, R], p.maxRequestInTempCh)
 		for numWorker := p.minWorker; numWorker > 0; numWorker-- {
@@ -153,6 +169,7 @@ func (p *wormPool[T, R]) Start() {
 
 func (p *wormPool2[T]) Start() {
 	if !p.isStarted.Swap(true) {
+		p.ctx, p.cancelFn = context.WithCancel(context.Background())
 		p.requestCh = make(chan *requestItem2[T], p.maxRequestInCh)
 		p.requestTempCh = make(chan *requestItem2[T], p.maxRequestInTempCh)
 		for numWorker := p.minWorker; numWorker > 0; numWorker-- {
@@ -163,6 +180,7 @@ func (p *wormPool2[T]) Start() {
 
 func (p *wormPool[T, R]) Stop() {
 	if p.isStarted.Swap(false) {
+		p.cancelFn()
 		close(p.requestCh)
 		close(p.requestTempCh)
 	}
@@ -170,13 +188,14 @@ func (p *wormPool[T, R]) Stop() {
 
 func (p *wormPool2[T]) Stop() {
 	if p.isStarted.Swap(false) {
+		p.cancelFn()
 		close(p.requestCh)
 		close(p.requestTempCh)
 	}
 }
 
 func (p *wormPool[T, R]) do(item *requestItem[T, R]) {
-	resp, err := p.goFn(item.req)
+	resp, err := p.doFn(item.req)
 	item.respFn(item.req, resp, err)
 }
 
@@ -185,14 +204,30 @@ func (p *wormPool2[T]) run(item *requestItem2[T]) {
 }
 
 func (p *wormPool[T, R]) goDo() {
-	for item := range p.requestCh {
-		p.do(item)
+For:
+	for {
+		select {
+		case item := <-p.requestCh:
+			if item != nil {
+				p.do(item)
+			}
+		case <-p.ctx.Done():
+			break For
+		}
 	}
 }
 
 func (p *wormPool2[T]) goRun() {
-	for item := range p.requestCh {
-		p.run(item)
+For:
+	for {
+		select {
+		case item := <-p.requestCh:
+			if item != nil {
+				p.run(item)
+			}
+		case <-p.ctx.Done():
+			break For
+		}
 	}
 }
 
@@ -232,7 +267,7 @@ func TickWaitTimeOpt(duration time.Duration) Option {
 }
 
 // NewGoroutinePool[T, R] create a new GoroutinePool[T, R] instance
-func NewGoroutinePool[T, R any](fn GoFn[T, R], opts ...Option) GoroutinePool[T, R] {
+func NewGoroutinePool[T, R any](fn DoFn[T, R], opts ...Option) GoroutinePool[T, R] {
 	opt := &gorotinePoolOpt{
 		minWorker:          10,
 		maxRequestInCh:     100,
@@ -249,7 +284,7 @@ func NewGoroutinePool[T, R any](fn GoFn[T, R], opts ...Option) GoroutinePool[T, 
 		minWorker:          opt.minWorker,
 		maxTickCount:       opt.maxTickCount,
 		tickWaitTime:       opt.tickWaitTime,
-		goFn:               fn,
+		doFn:               fn,
 	}
 	p.Start()
 	return p
