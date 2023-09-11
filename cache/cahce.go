@@ -39,3 +39,15 @@ func NewKeyPool[K comparable](size int, newFn func(key K) string) (KeyPool[K], e
 		newFn: newFn,
 	}, nil
 }
+
+// MustKeyPool[K] same as NewKeyPool[K] bug panic if occurs error
+func MustKeyPool[K comparable](size int, newFn func(key K) string) KeyPool[K] {
+	pool, err := lru.New[K, string](size)
+	if err != nil {
+		panic(err)
+	}
+	return &lruKeyPool[K]{
+		pool:  pool,
+		newFn: newFn,
+	}
+}
