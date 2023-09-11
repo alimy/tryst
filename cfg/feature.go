@@ -7,7 +7,7 @@ package cfg
 import (
 	"strings"
 
-	"github.com/alimy/tryst"
+	"github.com/alimy/tryst/types"
 )
 
 // Features fetures info struct
@@ -18,7 +18,7 @@ type Features struct {
 }
 
 // Actions feature-func map alias type
-type Actions map[string]tryst.Fn
+type Actions map[string]types.Fn
 
 // NewFeatures create new Features instance
 func NewFeatures(suites map[string][]string, kv map[string]string) *Features {
@@ -150,7 +150,7 @@ func (f *Features) CfgAny(expressions ...string) bool {
 
 // CfgIn range actions to check item's expression is true then do the handle, defFn will handle
 // if all items are not matched,
-func (f *Features) CfgIn(actions Actions, defAct ...tryst.Fn) {
+func (f *Features) CfgIn(actions Actions, defAct ...types.Fn) {
 	itemMatched := false
 	for expression, handle := range actions {
 		if f.CfgIf(expression) && handle != nil {
@@ -169,7 +169,7 @@ func (f *Features) CfgIn(actions Actions, defAct ...tryst.Fn) {
 
 // CfgOn range actions to check item's expression is true then do the handle and return, defFn will handle
 // if all items are not matched,
-func (f *Features) CfgOn(actions Actions, defAct ...tryst.Fn) {
+func (f *Features) CfgOn(actions Actions, defAct ...types.Fn) {
 	for expression, handle := range actions {
 		if f.CfgIf(expression) && handle != nil {
 			handle()
@@ -189,7 +189,7 @@ func (f *Features) CfgOn(actions Actions, defAct ...tryst.Fn) {
 // `Sms` is mean `Sms` whether defined in suite feature settings. expression like
 // `Sms = SmsJuhe` is mean whether `Sms` define in suite feature settings and value
 // is `SmsJuhe`
-func (f *Features) CfgBe(expression string, handle tryst.Fn) {
+func (f *Features) CfgBe(expression string, handle types.Fn) {
 	if f.CfgIf(expression) && handle != nil {
 		handle()
 	}
