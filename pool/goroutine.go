@@ -6,6 +6,7 @@ package pool
 
 import (
 	"context"
+	"fmt"
 	"sync/atomic"
 	"time"
 )
@@ -198,12 +199,22 @@ func (p *wormPool[T, R]) do(item *requestItem[T, R]) {
 	if item != nil {
 		resp, err := p.doFn(item.req)
 		item.respFn(item.req, resp, err)
+		defer func() {
+			if err := recover(); err != nil {
+				item.respFn(item.req, resp, fmt.Errorf("run fn occurs panic: %s", err))
+			}
+		}()
 	}
 }
 
 func (p *wormPool2[T]) run(item *requestItem2[T]) {
 	if item != nil {
 		item.respFn(item.req, p.runFn(item.req))
+		defer func() {
+			if err := recover(); err != nil {
+				item.respFn(item.req, fmt.Errorf("run fn occurs panic: %s", err))
+			}
+		}()
 	}
 }
 
