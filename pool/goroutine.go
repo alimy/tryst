@@ -201,7 +201,7 @@ func (p *wormPool[T, R]) do(item *requestItem[T, R]) {
 		item.respFn(item.req, resp, err)
 		defer func() {
 			if err := recover(); err != nil {
-				item.respFn(item.req, resp, fmt.Errorf("run fn occurs panic: %s", err))
+				item.respFn(item.req, resp, fmt.Errorf("do fn occurs panic: %s", err))
 			}
 		}()
 	}
