@@ -9,12 +9,12 @@ import (
 
 type Int int
 
-func (i Int) Less(other interface{}) bool {
-	return i < other.(Int)
+func (i Int) Less(other Int) bool {
+	return i < other
 }
 
 func TestInt(t *testing.T) {
-	sl := New()
+	sl := New[Int]()
 	if sl.Len() != 0 || sl.Front() != nil && sl.Back() != nil {
 		t.Fatal()
 	}
@@ -22,17 +22,17 @@ func TestInt(t *testing.T) {
 	testData := []Int{Int(1), Int(2), Int(3)}
 
 	sl.Insert(testData[0])
-	if sl.Len() != 1 || sl.Front().Value.(Int) != testData[0] || sl.Back().Value.(Int) != testData[0] {
+	if sl.Len() != 1 || sl.Front().Value != testData[0] || sl.Back().Value != testData[0] {
 		t.Fatal()
 	}
 
 	sl.Insert(testData[2])
-	if sl.Len() != 2 || sl.Front().Value.(Int) != testData[0] || sl.Back().Value.(Int) != testData[2] {
+	if sl.Len() != 2 || sl.Front().Value != testData[0] || sl.Back().Value != testData[2] {
 		t.Fatal()
 	}
 
 	sl.Insert(testData[1])
-	if sl.Len() != 3 || sl.Front().Value.(Int) != testData[0] || sl.Back().Value.(Int) != testData[2] {
+	if sl.Len() != 3 || sl.Front().Value != testData[0] || sl.Back().Value != testData[2] {
 		t.Fatal()
 	}
 
@@ -46,7 +46,7 @@ func TestInt(t *testing.T) {
 	ret := make([]Int, 0)
 
 	for e := sl.Front(); e != nil; e = e.Next() {
-		ret = append(ret, e.Value.(Int))
+		ret = append(ret, e.Value)
 	}
 	for i := 0; i < len(ret); i++ {
 		if ret[i] != expect[i] {
@@ -55,13 +55,13 @@ func TestInt(t *testing.T) {
 	}
 
 	e := sl.Find(Int(2))
-	if e == nil || e.Value.(Int) != 2 {
+	if e == nil || e.Value != 2 {
 		t.Fatal()
 	}
 
 	ret = make([]Int, 0)
 	for ; e != nil; e = e.Next() {
-		ret = append(ret, e.Value.(Int))
+		ret = append(ret, e.Value)
 	}
 	for i := 0; i < len(ret); i++ {
 		if ret[i] != expect[i+3] {
@@ -77,7 +77,7 @@ func TestInt(t *testing.T) {
 	ret = make([]Int, 0)
 
 	for e := sl.Back(); e != nil; e = e.Prev() {
-		ret = append(ret, e.Value.(Int))
+		ret = append(ret, e.Value)
 	}
 
 	for i := 0; i < len(ret); i++ {
@@ -86,26 +86,26 @@ func TestInt(t *testing.T) {
 		}
 	}
 
-	if sl.Front().Value.(Int) != -999 {
+	if sl.Front().Value != -999 {
 		t.Fatal()
 	}
 
 	sl.Remove(sl.Front())
-	if sl.Front().Value.(Int) != -888 || sl.Back().Value.(Int) != 999 {
+	if sl.Front().Value != -888 || sl.Back().Value != 999 {
 		t.Fatal()
 	}
 
 	sl.Remove(sl.Back())
-	if sl.Front().Value.(Int) != -888 || sl.Back().Value.(Int) != 3 {
+	if sl.Front().Value != -888 || sl.Back().Value != 3 {
 		t.Fatal()
 	}
 
-	if e = sl.Insert(Int(2)); e.Value.(Int) != 2 {
+	if e = sl.Insert(Int(2)); e.Value != 2 {
 		t.Fatal()
 	}
 	sl.Delete(Int(-888))
 
-	if r := sl.Delete(Int(123)); r != nil {
+	if r := sl.Delete(Int(123)); r != 0 {
 		t.Fatal()
 	}
 
@@ -124,7 +124,7 @@ func TestInt(t *testing.T) {
 	expect = []Int{Int(2), Int(2), Int(2), Int(3)}
 	ret = make([]Int, 0)
 	for ; e != nil; e = e.Next() {
-		ret = append(ret, e.Value.(Int))
+		ret = append(ret, e.Value)
 	}
 	for i := 0; i < len(ret); i++ {
 		if ret[i] != expect[i] {
@@ -145,7 +145,7 @@ func TestInt(t *testing.T) {
 }
 
 func TestRank(t *testing.T) {
-	sl := New()
+	sl := New[Int]()
 
 	for i := 1; i <= 10; i++ {
 		sl.Insert(Int(i))
@@ -203,7 +203,7 @@ func TestRank(t *testing.T) {
 
 func BenchmarkIntInsertOrder(b *testing.B) {
 	b.StopTimer()
-	sl := New()
+	sl := New[Int]()
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -213,7 +213,7 @@ func BenchmarkIntInsertOrder(b *testing.B) {
 
 func BenchmarkIntInsertRandom(b *testing.B) {
 	b.StopTimer()
-	sl := New()
+	sl := New[Int]()
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -223,7 +223,7 @@ func BenchmarkIntInsertRandom(b *testing.B) {
 
 func BenchmarkIntDeleteOrder(b *testing.B) {
 	b.StopTimer()
-	sl := New()
+	sl := New[Int]()
 	for i := 0; i < 1000000; i++ {
 		sl.Insert(Int(i))
 	}
@@ -236,7 +236,7 @@ func BenchmarkIntDeleteOrder(b *testing.B) {
 
 func BenchmarkIntDeleteRandome(b *testing.B) {
 	b.StopTimer()
-	sl := New()
+	sl := New[Int]()
 	for i := 0; i < 1000000; i++ {
 		sl.Insert(Int(rand.Int()))
 	}
@@ -249,7 +249,7 @@ func BenchmarkIntDeleteRandome(b *testing.B) {
 
 func BenchmarkIntFindOrder(b *testing.B) {
 	b.StopTimer()
-	sl := New()
+	sl := New[Int]()
 	for i := 0; i < 1000000; i++ {
 		sl.Insert(Int(i))
 	}
@@ -262,7 +262,7 @@ func BenchmarkIntFindOrder(b *testing.B) {
 
 func BenchmarkIntFindRandom(b *testing.B) {
 	b.StopTimer()
-	sl := New()
+	sl := New[Int]()
 	for i := 0; i < 1000000; i++ {
 		sl.Insert(Int(rand.Int()))
 	}
@@ -275,7 +275,7 @@ func BenchmarkIntFindRandom(b *testing.B) {
 
 func BenchmarkIntRankOrder(b *testing.B) {
 	b.StopTimer()
-	sl := New()
+	sl := New[Int]()
 	for i := 0; i < 1000000; i++ {
 		sl.Insert(Int(i))
 	}
@@ -288,7 +288,7 @@ func BenchmarkIntRankOrder(b *testing.B) {
 
 func BenchmarkIntRankRandom(b *testing.B) {
 	b.StopTimer()
-	sl := New()
+	sl := New[Int]()
 	for i := 0; i < 1000000; i++ {
 		sl.Insert(Int(rand.Int()))
 	}
@@ -299,8 +299,8 @@ func BenchmarkIntRankRandom(b *testing.B) {
 	}
 }
 
-func output(sl *SkipList) {
-	var x *Element
+func output[T Interface[T]](sl *SkipList[T]) {
+	var x *Element[T]
 	for i := 0; i < SKIPLIST_MAXLEVEL; i++ {
 		fmt.Printf("LEVEL[%v]: ", i)
 		count := 0
