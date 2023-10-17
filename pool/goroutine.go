@@ -11,6 +11,12 @@ import (
 	"time"
 )
 
+// WorkerHook hook worker status
+type WorkerHook interface {
+	OnJoin(count int)
+	OnLeave(count int)
+}
+
 // ResponseFn[T, R] response handle function
 type ResponseFn[T, R any] func(req T, resp R, err error)
 
@@ -47,6 +53,7 @@ type gorotinePoolOpt struct {
 	maxRequestInTempCh int
 	maxTickCount       int
 	tickWaitTime       time.Duration
+	workerHook         WorkerHook
 }
 
 type requestItem[T, R any] struct {
@@ -68,9 +75,11 @@ type wormPool[T, R any] struct {
 	maxRequestInTempCh int
 	minWorker          int // 最少正式工数
 	maxTickCount       int
+	tempWorkerCount    int
 	tickWaitTime       time.Duration
 	doFn               DoFn[T, R]
 	cancelFn           context.CancelFunc
+	workerHook         WorkerHook
 }
 
 type wormPool2[T any] struct {
@@ -82,9 +91,11 @@ type wormPool2[T any] struct {
 	maxRequestInTempCh int
 	minWorker          int // 最少正式工数
 	maxTickCount       int
+	tempWorkerCount    int
 	tickWaitTime       time.Duration
 	runFn              RunFn[T]
 	cancelFn           context.CancelFunc
+	workerHook         WorkerHook
 }
 
 func (p *wormPool[T, R]) Do(req T, fn ResponseFn[T, R]) {
@@ -100,6 +111,18 @@ func (p *wormPool[T, R]) Do(req T, fn ResponseFn[T, R]) {
 			// send request item by requestTempCh chan"
 		default:
 			go func() {
+				// update temp worker count and run worker hook
+				p.tempWorkerCount++
+				if p.workerHook != nil {
+					p.workerHook.OnJoin(p.tempWorkerCount)
+				}
+				defer func() {
+					p.tempWorkerCount--
+					if p.workerHook != nil {
+						p.workerHook.OnLeave(p.tempWorkerCount)
+					}
+				}()
+				// handle the request
 				p.do(item)
 				// watch requestTempCh to continue do work if needed.
 				// cancel loop if no item had watched in s.maxTickCount * s.tickWaitTime.
@@ -135,6 +158,18 @@ func (p *wormPool2[T]) Run(req T, fn RespFn[T]) {
 			// send request item by requestTempCh chan"
 		default:
 			go func() {
+				// update temp worker count and run worker hook
+				p.tempWorkerCount++
+				if p.workerHook != nil {
+					p.workerHook.OnJoin(p.tempWorkerCount)
+				}
+				defer func() {
+					p.tempWorkerCount--
+					if p.workerHook != nil {
+						p.workerHook.OnLeave(p.tempWorkerCount)
+					}
+				}()
+				// handle the request
 				p.run(item)
 				// watch requestTempCh to continue do work if needed.
 				// cancel loop if no item had watched in s.maxTickCount * s.tickWaitTime.
@@ -277,6 +312,13 @@ func TickWaitTimeOpt(duration time.Duration) Option {
 	}
 }
 
+// WorkerHookOpt set wroker hook
+func WorkerHookOpt(h WorkerHook) Option {
+	return func(opt *gorotinePoolOpt) {
+		opt.workerHook = h
+	}
+}
+
 // NewGoroutinePool[T, R] create a new GoroutinePool[T, R] instance
 func NewGoroutinePool[T, R any](fn DoFn[T, R], opts ...Option) GoroutinePool[T, R] {
 	opt := &gorotinePoolOpt{
@@ -295,6 +337,7 @@ func NewGoroutinePool[T, R any](fn DoFn[T, R], opts ...Option) GoroutinePool[T, 
 		minWorker:          opt.minWorker,
 		maxTickCount:       opt.maxTickCount,
 		tickWaitTime:       opt.tickWaitTime,
+		workerHook:         opt.workerHook,
 		doFn:               fn,
 	}
 	p.Start()
@@ -319,6 +362,7 @@ func NewGoroutinePool2[T any](fn RunFn[T], opts ...Option) GoroutinePool2[T] {
 		minWorker:          opt.minWorker,
 		maxTickCount:       opt.maxTickCount,
 		tickWaitTime:       opt.tickWaitTime,
+		workerHook:         opt.workerHook,
 		runFn:              fn,
 	}
 	p.Start()
