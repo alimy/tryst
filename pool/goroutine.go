@@ -13,8 +13,8 @@ import (
 
 // WorkerHook hook worker status
 type WorkerHook interface {
-	OnJoin(count int)
-	OnLeave(count int)
+	OnJoin(count int32)
+	OnLeave(count int32)
 }
 
 // ResponseFn[T, R] response handle function
@@ -75,7 +75,7 @@ type wormPool[T, R any] struct {
 	maxRequestInTempCh int
 	minWorker          int // 最少正式工数
 	maxTickCount       int
-	tempWorkerCount    int
+	tempWorkerCount    atomic.Int32
 	tickWaitTime       time.Duration
 	doFn               DoFn[T, R]
 	cancelFn           context.CancelFunc
@@ -91,7 +91,7 @@ type wormPool2[T any] struct {
 	maxRequestInTempCh int
 	minWorker          int // 最少正式工数
 	maxTickCount       int
-	tempWorkerCount    int
+	tempWorkerCount    atomic.Int32
 	tickWaitTime       time.Duration
 	runFn              RunFn[T]
 	cancelFn           context.CancelFunc
@@ -112,16 +112,12 @@ func (p *wormPool[T, R]) Do(req T, fn ResponseFn[T, R]) {
 		default:
 			go func() {
 				// update temp worker count and run worker hook
-				p.tempWorkerCount++
 				if p.workerHook != nil {
-					p.workerHook.OnJoin(p.tempWorkerCount)
+					p.workerHook.OnJoin(p.tempWorkerCount.Add(1))
+					defer func() {
+						p.workerHook.OnLeave(p.tempWorkerCount.Add(-1))
+					}()
 				}
-				defer func() {
-					p.tempWorkerCount--
-					if p.workerHook != nil {
-						p.workerHook.OnLeave(p.tempWorkerCount)
-					}
-				}()
 				// handle the request
 				p.do(item)
 				// watch requestTempCh to continue do work if needed.
@@ -159,16 +155,12 @@ func (p *wormPool2[T]) Run(req T, fn RespFn[T]) {
 		default:
 			go func() {
 				// update temp worker count and run worker hook
-				p.tempWorkerCount++
 				if p.workerHook != nil {
-					p.workerHook.OnJoin(p.tempWorkerCount)
+					p.workerHook.OnJoin(p.tempWorkerCount.Add(1))
+					defer func() {
+						p.workerHook.OnLeave(p.tempWorkerCount.Add(-1))
+					}()
 				}
-				defer func() {
-					p.tempWorkerCount--
-					if p.workerHook != nil {
-						p.workerHook.OnLeave(p.tempWorkerCount)
-					}
-				}()
 				// handle the request
 				p.run(item)
 				// watch requestTempCh to continue do work if needed.
