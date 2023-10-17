@@ -114,9 +114,7 @@ func (p *wormPool[T, R]) Do(req T, fn ResponseFn[T, R]) {
 				// update temp worker count and run worker hook
 				if p.workerHook != nil {
 					p.workerHook.OnJoin(p.tempWorkerCount.Add(1))
-					defer func() {
-						p.workerHook.OnLeave(p.tempWorkerCount.Add(-1))
-					}()
+					defer p.workerHook.OnLeave(p.tempWorkerCount.Add(-1))
 				}
 				// handle the request
 				p.do(item)
@@ -157,9 +155,7 @@ func (p *wormPool2[T]) Run(req T, fn RespFn[T]) {
 				// update temp worker count and run worker hook
 				if p.workerHook != nil {
 					p.workerHook.OnJoin(p.tempWorkerCount.Add(1))
-					defer func() {
-						p.workerHook.OnLeave(p.tempWorkerCount.Add(-1))
-					}()
+					defer p.workerHook.OnLeave(p.tempWorkerCount.Add(-1))
 				}
 				// handle the request
 				p.run(item)
