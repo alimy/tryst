@@ -52,8 +52,7 @@ type gorotinePoolOpt struct {
 	maxTempWorker      int
 	maxRequestInCh     int
 	maxRequestInTempCh int
-	maxTickCount       int
-	tickWaitTime       time.Duration
+	maxIdleTime        time.Duration
 	workerHook         WorkerHook
 }
 
@@ -77,9 +76,8 @@ type wormPool[T, R any] struct {
 	maxRequestInTempCh int
 	minWorker          int // 最少正式工数
 	maxTempWorker      int // 最大临时工数，-1表示无限制
-	maxTickCount       int
+	maxIdleTime        time.Duration
 	tempWorkerCount    atomic.Int32
-	tickWaitTime       time.Duration
 	doFn               DoFn[T, R]
 	cancelFn           context.CancelFunc
 	workerHook         WorkerHook
@@ -95,9 +93,8 @@ type wormPool2[T any] struct {
 	maxRequestInTempCh int
 	minWorker          int // 最少正式工数
 	maxTempWorker      int // 最大临时工数，-1表示无限制
-	maxTickCount       int
+	maxIdleTime        time.Duration
 	tempWorkerCount    atomic.Int32
-	tickWaitTime       time.Duration
 	runFn              RunFn[T]
 	cancelFn           context.CancelFunc
 	workerHook         WorkerHook
@@ -134,20 +131,22 @@ func (p *wormPool[T, R]) Do(req T, fn ResponseFn[T, R]) {
 				// handle the request
 				p.do(item)
 				// watch requestTempCh to continue do work if needed.
-				// cancel loop if no item had watched in s.maxTickCount * s.tickWaitTime.
-			For:
-				for count := 0; count < p.maxTickCount; count++ {
+				idleTimer := time.NewTimer(p.maxIdleTime)
+				for {
 					select {
 					case item := <-p.requestTempCh:
-						// reset count to continue do work
-						count = 0
 						p.do(item)
 					case <-p.ctx.Done():
-						break For
-					default:
-						// sleeping to wait request item pass over to do work
-						time.Sleep(p.tickWaitTime)
+						// worker exits
+						return
+					case <-idleTimer.C:
+						// worker exits
+						return
 					}
+					if !idleTimer.Stop() {
+						<-idleTimer.C
+					}
+					idleTimer.Reset(p.maxIdleTime)
 				}
 			}()
 		}
@@ -185,20 +184,22 @@ func (p *wormPool2[T]) Run(req T, fn RespFn[T]) {
 				// handle the request
 				p.run(item)
 				// watch requestTempCh to continue do work if needed.
-				// cancel loop if no item had watched in s.maxTickCount * s.tickWaitTime.
-			For:
-				for count := 0; count < p.maxTickCount; count++ {
+				idleTimer := time.NewTimer(p.maxIdleTime)
+				for {
 					select {
 					case item := <-p.requestTempCh:
-						// reset count to continue do work
-						count = 0
 						p.run(item)
 					case <-p.ctx.Done():
-						break For
-					default:
-						// sleeping to wait request item pass over to do work
-						time.Sleep(p.tickWaitTime)
+						// worker exits
+						return
+					case <-idleTimer.C:
+						// worker exits
+						return
 					}
+					if !idleTimer.Stop() {
+						<-idleTimer.C
+					}
+					idleTimer.Reset(p.maxIdleTime)
 				}
 			}()
 		}
@@ -358,49 +359,43 @@ For:
 	}
 }
 
-// MinWorkerOpt set min worker
-func MinWorkerOpt(num int) Option {
+// WithMinWorker set min worker count
+func WithMinWorker(num int) Option {
 	return func(opt *gorotinePoolOpt) {
 		opt.minWorker = num
 	}
 }
 
-func MaxTempWorkerOpt(num int) Option {
+// WithMaxRequestBuf set max temp worker count
+func WithMaxTempWorker(num int) Option {
 	return func(opt *gorotinePoolOpt) {
 		opt.maxTempWorker = num
 	}
 }
 
-// MaxRequestBufOpt set max request buffer size
-func MaxRequestBufOpt(num int) Option {
+// WithMaxRequestBuf set max request buffer size
+func WithMaxRequestBuf(num int) Option {
 	return func(opt *gorotinePoolOpt) {
 		opt.maxRequestInCh = num
 	}
 }
 
-// MaxRequestTempBufOpt set max request temp buffer size
-func MaxRequestTempBufOpt(num int) Option {
+// WithMaxRequestTempBuf set max request temp buffer size
+func WithMaxRequestTempBuf(num int) Option {
 	return func(opt *gorotinePoolOpt) {
 		opt.maxRequestInTempCh = num
 	}
 }
 
-// MaxTickCountOpt set max tick count
-func MaxTickCountOpt(num int) Option {
+// WithMaxIdelTime set max idle time to custom a worker max wait tile to worker
+func WithMaxIdelTime(d time.Duration) Option {
 	return func(opt *gorotinePoolOpt) {
-		opt.maxTickCount = num
+		opt.maxIdleTime = d
 	}
 }
 
-// TickWaitTimeOpt set tick wait time
-func TickWaitTimeOpt(duration time.Duration) Option {
-	return func(opt *gorotinePoolOpt) {
-		opt.tickWaitTime = duration
-	}
-}
-
-// WorkerHookOpt set wroker hook
-func WorkerHookOpt(h WorkerHook) Option {
+// WithWorkerHookOpt set wroker hook
+func WithWorkerHook(h WorkerHook) Option {
 	return func(opt *gorotinePoolOpt) {
 		opt.workerHook = h
 	}
@@ -413,8 +408,7 @@ func NewGoroutinePool[T, R any](fn DoFn[T, R], opts ...Option) GoroutinePool[T, 
 		maxTempWorker:      -1,
 		maxRequestInCh:     100,
 		maxRequestInTempCh: 100,
-		maxTickCount:       60,
-		tickWaitTime:       time.Second,
+		maxIdleTime:        60 * time.Second,
 	}
 	for _, optFn := range opts {
 		optFn(opt)
@@ -424,8 +418,7 @@ func NewGoroutinePool[T, R any](fn DoFn[T, R], opts ...Option) GoroutinePool[T, 
 		maxRequestInTempCh: opt.maxRequestInTempCh,
 		minWorker:          opt.minWorker,
 		maxTempWorker:      opt.maxTempWorker,
-		maxTickCount:       opt.maxTickCount,
-		tickWaitTime:       opt.tickWaitTime,
+		maxIdleTime:        opt.maxIdleTime,
 		workerHook:         opt.workerHook,
 		doFn:               fn,
 	}
@@ -440,8 +433,7 @@ func NewGoroutinePool2[T any](fn RunFn[T], opts ...Option) GoroutinePool2[T] {
 		maxTempWorker:      -1,
 		maxRequestInCh:     100,
 		maxRequestInTempCh: 100,
-		maxTickCount:       60,
-		tickWaitTime:       time.Second,
+		maxIdleTime:        60 * time.Second,
 	}
 	for _, optFn := range opts {
 		optFn(opt)
@@ -451,8 +443,7 @@ func NewGoroutinePool2[T any](fn RunFn[T], opts ...Option) GoroutinePool2[T] {
 		maxRequestInTempCh: opt.maxRequestInTempCh,
 		minWorker:          opt.minWorker,
 		maxTempWorker:      opt.maxTempWorker,
-		maxTickCount:       opt.maxTickCount,
-		tickWaitTime:       opt.tickWaitTime,
+		maxIdleTime:        opt.maxIdleTime,
 		workerHook:         opt.workerHook,
 		runFn:              fn,
 	}

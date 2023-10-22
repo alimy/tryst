@@ -14,16 +14,14 @@ func TestGoroutinePoolOpt(t *testing.T) {
 		minWorker:          10,
 		maxRequestInCh:     100,
 		maxRequestInTempCh: 100,
-		maxTickCount:       60,
-		tickWaitTime:       time.Second,
+		maxIdleTime:        60 * time.Second,
 	}
 	opt := gorotinePoolOpt{}
 	for _, optFn := range []Option{
-		MinWorkerOpt(10),
-		MaxRequestBufOpt(100),
-		MaxRequestTempBufOpt(100),
-		MaxTickCountOpt(60),
-		TickWaitTimeOpt(time.Second),
+		WithMinWorker(10),
+		WithMaxRequestBuf(100),
+		WithMaxRequestTempBuf(100),
+		WithMaxIdelTime(60 * time.Second),
 	} {
 		optFn(&opt)
 	}
