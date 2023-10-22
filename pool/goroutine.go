@@ -49,6 +49,7 @@ type Option = func(opt *gorotinePoolOpt)
 // grotinePoolOpt gorotine pool option used to create gorotine pool instance
 type gorotinePoolOpt struct {
 	minWorker          int
+	maxTempWorker      int
 	maxRequestInCh     int
 	maxRequestInTempCh int
 	maxTickCount       int
@@ -71,9 +72,11 @@ type wormPool[T, R any] struct {
 	isStarted          atomic.Bool
 	requestCh          chan *requestItem[T, R] // 正式工 缓存通道
 	requestTempCh      chan *requestItem[T, R] // 临时工 缓存通道
+	requestBufCh       chan *requestItem[T, R] // 请求缓存通道
 	maxRequestInCh     int
 	maxRequestInTempCh int
 	minWorker          int // 最少正式工数
+	maxTempWorker      int // 最大临时工数，-1表示无限制
 	maxTickCount       int
 	tempWorkerCount    atomic.Int32
 	tickWaitTime       time.Duration
@@ -87,9 +90,11 @@ type wormPool2[T any] struct {
 	isStarted          atomic.Bool
 	requestCh          chan *requestItem2[T] // 正式工 缓存通道
 	requestTempCh      chan *requestItem2[T] // 临时工 缓存通道
+	requestBufCh       chan *requestItem2[T] // 请求缓存通道
 	maxRequestInCh     int
 	maxRequestInTempCh int
 	minWorker          int // 最少正式工数
+	maxTempWorker      int // 最大临时工数，-1表示无限制
 	maxTickCount       int
 	tempWorkerCount    atomic.Int32
 	tickWaitTime       time.Duration
@@ -110,12 +115,22 @@ func (p *wormPool[T, R]) Do(req T, fn ResponseFn[T, R]) {
 		case p.requestTempCh <- item:
 			// send request item by requestTempCh chan"
 		default:
+			if p.maxTempWorker >= 0 && p.tempWorkerCount.Load() >= int32(p.maxTempWorker) {
+				p.requestBufCh <- item
+				break
+			}
 			go func() {
 				// update temp worker count and run worker hook
+				count := p.tempWorkerCount.Add(1)
 				if p.workerHook != nil {
-					p.workerHook.OnJoin(p.tempWorkerCount.Add(1))
-					defer p.workerHook.OnLeave(p.tempWorkerCount.Add(-1))
+					p.workerHook.OnJoin(count)
 				}
+				defer func() {
+					count = p.tempWorkerCount.Add(-1)
+					if p.workerHook != nil {
+						p.workerHook.OnLeave(count)
+					}
+				}()
 				// handle the request
 				p.do(item)
 				// watch requestTempCh to continue do work if needed.
@@ -151,12 +166,22 @@ func (p *wormPool2[T]) Run(req T, fn RespFn[T]) {
 		case p.requestTempCh <- item:
 			// send request item by requestTempCh chan"
 		default:
+			if p.maxTempWorker >= 0 && p.tempWorkerCount.Load() >= int32(p.maxTempWorker) {
+				p.requestBufCh <- item
+				break
+			}
 			go func() {
 				// update temp worker count and run worker hook
+				count := p.tempWorkerCount.Add(1)
 				if p.workerHook != nil {
-					p.workerHook.OnJoin(p.tempWorkerCount.Add(1))
-					defer p.workerHook.OnLeave(p.tempWorkerCount.Add(-1))
+					p.workerHook.OnJoin(count)
 				}
+				defer func() {
+					count = p.tempWorkerCount.Add(-1)
+					if p.workerHook != nil {
+						p.workerHook.OnLeave(count)
+					}
+				}()
 				// handle the request
 				p.run(item)
 				// watch requestTempCh to continue do work if needed.
@@ -188,6 +213,10 @@ func (p *wormPool[T, R]) Start() {
 		for numWorker := p.minWorker; numWorker > 0; numWorker-- {
 			go p.goDo()
 		}
+		if p.maxTempWorker >= 0 {
+			p.requestBufCh = make(chan *requestItem[T, R], 1)
+			go p.runBufferWroker()
+		}
 	}
 }
 
@@ -199,6 +228,64 @@ func (p *wormPool2[T]) Start() {
 		for numWorker := p.minWorker; numWorker > 0; numWorker-- {
 			go p.goRun()
 		}
+		if p.maxTempWorker >= 0 {
+			p.requestBufCh = make(chan *requestItem2[T], 1)
+			go p.runBufferWroker()
+		}
+	}
+}
+
+func (p *wormPool[T, R]) runBufferWroker() {
+	var reqBuf []*requestItem[T, R]
+	for {
+		if latesIdx := len(reqBuf) - 1; latesIdx >= 0 {
+			select {
+			case p.requestCh <- reqBuf[0]:
+				reqBuf[0] = reqBuf[latesIdx]
+				reqBuf = reqBuf[:latesIdx]
+			case p.requestTempCh <- reqBuf[0]:
+				reqBuf[0] = reqBuf[latesIdx]
+				reqBuf = reqBuf[:latesIdx]
+			case item := <-p.requestBufCh:
+				reqBuf = append(reqBuf, item)
+			case <-p.ctx.Done():
+				return
+			}
+		} else {
+			select {
+			case item := <-p.requestBufCh:
+				reqBuf = append(reqBuf, item)
+			case <-p.ctx.Done():
+				return
+			}
+		}
+	}
+}
+
+func (p *wormPool2[T]) runBufferWroker() {
+	var reqBuf []*requestItem2[T]
+	for {
+		if latesIdx := len(reqBuf) - 1; latesIdx >= 0 {
+			select {
+			case p.requestCh <- reqBuf[0]:
+				reqBuf[0] = reqBuf[latesIdx]
+				reqBuf = reqBuf[:latesIdx]
+			case p.requestTempCh <- reqBuf[0]:
+				reqBuf[0] = reqBuf[latesIdx]
+				reqBuf = reqBuf[:latesIdx]
+			case item := <-p.requestBufCh:
+				reqBuf = append(reqBuf, item)
+			case <-p.ctx.Done():
+				return
+			}
+		} else {
+			select {
+			case item := <-p.requestBufCh:
+				reqBuf = append(reqBuf, item)
+			case <-p.ctx.Done():
+				return
+			}
+		}
 	}
 }
 
@@ -207,6 +294,9 @@ func (p *wormPool[T, R]) Stop() {
 		p.cancelFn()
 		close(p.requestCh)
 		close(p.requestTempCh)
+		if p.maxTempWorker >= 0 {
+			close(p.requestBufCh)
+		}
 	}
 }
 
@@ -215,6 +305,9 @@ func (p *wormPool2[T]) Stop() {
 		p.cancelFn()
 		close(p.requestCh)
 		close(p.requestTempCh)
+		if p.maxTempWorker >= 0 {
+			close(p.requestBufCh)
+		}
 	}
 }
 
@@ -272,6 +365,12 @@ func MinWorkerOpt(num int) Option {
 	}
 }
 
+func MaxTempWorkerOpt(num int) Option {
+	return func(opt *gorotinePoolOpt) {
+		opt.maxTempWorker = num
+	}
+}
+
 // MaxRequestBufOpt set max request buffer size
 func MaxRequestBufOpt(num int) Option {
 	return func(opt *gorotinePoolOpt) {
@@ -311,6 +410,7 @@ func WorkerHookOpt(h WorkerHook) Option {
 func NewGoroutinePool[T, R any](fn DoFn[T, R], opts ...Option) GoroutinePool[T, R] {
 	opt := &gorotinePoolOpt{
 		minWorker:          10,
+		maxTempWorker:      -1,
 		maxRequestInCh:     100,
 		maxRequestInTempCh: 100,
 		maxTickCount:       60,
@@ -323,6 +423,7 @@ func NewGoroutinePool[T, R any](fn DoFn[T, R], opts ...Option) GoroutinePool[T, 
 		maxRequestInCh:     opt.maxRequestInCh,
 		maxRequestInTempCh: opt.maxRequestInTempCh,
 		minWorker:          opt.minWorker,
+		maxTempWorker:      opt.maxTempWorker,
 		maxTickCount:       opt.maxTickCount,
 		tickWaitTime:       opt.tickWaitTime,
 		workerHook:         opt.workerHook,
@@ -336,6 +437,7 @@ func NewGoroutinePool[T, R any](fn DoFn[T, R], opts ...Option) GoroutinePool[T, 
 func NewGoroutinePool2[T any](fn RunFn[T], opts ...Option) GoroutinePool2[T] {
 	opt := &gorotinePoolOpt{
 		minWorker:          10,
+		maxTempWorker:      -1,
 		maxRequestInCh:     100,
 		maxRequestInTempCh: 100,
 		maxTickCount:       60,
@@ -348,6 +450,7 @@ func NewGoroutinePool2[T any](fn RunFn[T], opts ...Option) GoroutinePool2[T] {
 		maxRequestInCh:     opt.maxRequestInCh,
 		maxRequestInTempCh: opt.maxRequestInTempCh,
 		minWorker:          opt.minWorker,
+		maxTempWorker:      opt.maxTempWorker,
 		maxTickCount:       opt.maxTickCount,
 		tickWaitTime:       opt.tickWaitTime,
 		workerHook:         opt.workerHook,
