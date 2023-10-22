@@ -134,7 +134,7 @@ func (p *wormPool[T, R]) Do(req T, fn ResponseFn[T, R]) {
 				idleTimer := time.NewTimer(p.maxIdleTime)
 				for {
 					select {
-					case item := <-p.requestTempCh:
+					case item = <-p.requestTempCh:
 						p.do(item)
 					case <-p.ctx.Done():
 						// worker exits
@@ -187,7 +187,7 @@ func (p *wormPool2[T]) Run(req T, fn RespFn[T]) {
 				idleTimer := time.NewTimer(p.maxIdleTime)
 				for {
 					select {
-					case item := <-p.requestTempCh:
+					case item = <-p.requestTempCh:
 						p.run(item)
 					case <-p.ctx.Done():
 						// worker exits
@@ -216,7 +216,7 @@ func (p *wormPool[T, R]) Start() {
 		}
 		if p.maxTempWorker >= 0 {
 			p.requestBufCh = make(chan *requestItem[T, R], 1)
-			go p.runBufferWroker()
+			go p.runBufferWorker()
 		}
 	}
 }
@@ -231,12 +231,12 @@ func (p *wormPool2[T]) Start() {
 		}
 		if p.maxTempWorker >= 0 {
 			p.requestBufCh = make(chan *requestItem2[T], 1)
-			go p.runBufferWroker()
+			go p.runBufferWorker()
 		}
 	}
 }
 
-func (p *wormPool[T, R]) runBufferWroker() {
+func (p *wormPool[T, R]) runBufferWorker() {
 	var reqBuf []*requestItem[T, R]
 	for {
 		if latesIdx := len(reqBuf) - 1; latesIdx >= 0 {
@@ -263,7 +263,7 @@ func (p *wormPool[T, R]) runBufferWroker() {
 	}
 }
 
-func (p *wormPool2[T]) runBufferWroker() {
+func (p *wormPool2[T]) runBufferWorker() {
 	var reqBuf []*requestItem2[T]
 	for {
 		if latesIdx := len(reqBuf) - 1; latesIdx >= 0 {
