@@ -3,7 +3,7 @@ module github.com/alimy/tryst
 go 1.21
 
 require (
-	github.com/bytedance/sonic v1.11.0
+	github.com/bytedance/sonic v1.11.1
 	github.com/goccy/go-json v0.10.2
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/json-iterator/go v1.1.12
