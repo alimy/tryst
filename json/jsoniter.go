@@ -21,4 +21,8 @@ var (
 	NewDecoder = json.NewDecoder
 	// NewEncoder is exported by gin/json package.
 	NewEncoder = json.NewEncoder
+	// UnmarshalFromString is exported by gin/json package.
+	MarshalToString = json.MarshalToString
+	// UnmarshalFromString is exported by gin/json package.
+	UnmarshalFromString = json.UnmarshalFromString
 )
