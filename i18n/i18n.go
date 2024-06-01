@@ -31,7 +31,7 @@ func init() {
 }
 
 // AliasFn alias of kv function
-type AliasFn func(string) string
+type AliasFn func(string, ...string) string
 
 // Register register translate assets
 func Register(assets map[string]map[string]string, fn ...func()) {
@@ -51,19 +51,27 @@ func Add(name string, kvs map[string]string, fn ...func()) {
 
 // Alias alias kv function by give name
 func Alias(name string) AliasFn {
-	res, exist := _i18nAssets[name]
+	kvs, exist := _i18nAssets[name]
 	if !exist {
-		res = make(map[string]string)
+		kvs = make(map[string]string)
 	}
-	return func(key string) string {
-		return res[key]
+	return func(key string, value ...string) (res string) {
+		exist := false
+		if res, exist = kvs[key]; !exist && len(value) > 0 {
+			res = value[0]
+		}
+		return
 	}
 }
 
-// Get get value by name and key
-func Get(name string, key string) (value string) {
+// Get get value by name and key, return default value if not empty
+func Get(name string, key string, value ...string) (res string) {
 	if kvs, exist := _i18nAssets[name]; exist {
-		value = kvs[key]
+		if res, exist = kvs[key]; !exist && len(value) > 0 {
+			res = value[0]
+		}
+	} else if len(value) > 0 {
+		res = value[0]
 	}
 	return
 }

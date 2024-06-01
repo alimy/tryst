@@ -83,6 +83,10 @@ func TestRegister(t *testing.T) {
 	if value := i18n.Get("cn", "nothing"); value != "" {
 		t.Errorf(`call i18.Get("cn", "nothing") want "" but got %s`, value)
 	}
+
+	if value := i18n.Get("cn", "nothing", "abc"); value != "abc" {
+		t.Errorf(`call i18.Get("cn", "nothing", "abc") want "abc" but got %s`, value)
+	}
 }
 
 func TestAdd(t *testing.T) {
