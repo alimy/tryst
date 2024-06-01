@@ -9,8 +9,18 @@ var (
 )
 
 var (
+	// Zh alias of Get("zh", ...) function
 	Zh = Alias("zh")
+	// En alias of Get("en", ...) function
 	En = Alias("en")
+	// T alias of Get function
+	T = Get
+	// Tr alias of Get function
+	Tr = Get
+	// M alias of Get function
+	M = Get
+	// N alias of Get function
+	N = Get
 )
 
 func init() {
@@ -20,8 +30,10 @@ func init() {
 	}
 }
 
+// AliasFn alias of kv function
 type AliasFn func(string) string
 
+// Register register translate assets
 func Register(assets map[string]map[string]string, fn ...func()) {
 	defer aliasVar(fn...)
 
@@ -30,12 +42,14 @@ func Register(assets map[string]map[string]string, fn ...func()) {
 	}
 }
 
+// Add add kv translate asset by name
 func Add(name string, kvs map[string]string, fn ...func()) {
 	defer aliasVar(fn...)
 
 	add(name, kvs)
 }
 
+// Alias alias kv function by give name
 func Alias(name string) AliasFn {
 	res, exist := _i18nAssets[name]
 	if !exist {
@@ -46,6 +60,7 @@ func Alias(name string) AliasFn {
 	}
 }
 
+// Get get value by name and key
 func Get(name string, key string) (value string) {
 	if kvs, exist := _i18nAssets[name]; exist {
 		value = kvs[key]
