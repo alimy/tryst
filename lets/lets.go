@@ -13,3 +13,11 @@ func If[T any](condition bool, trueVal, falseVal T) T {
 	}
 	return falseVal
 }
+
+// Val[T] return s[0] if s is give or else return v
+func Val[T any](v T, s ...T) T {
+	if len(s) > 0 {
+		return s[0]
+	}
+	return v
+}
