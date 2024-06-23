@@ -3,3 +3,13 @@
 // can be found in the LICENSE file.
 
 package auth
+
+type PasswordProvider interface {
+	Generate(password []byte) ([]byte, error)
+	Compare(hashedPassword, password []byte) error
+}
+
+type HashPasswordProvider interface {
+	Generate(password []byte, salt []byte) ([]byte, error)
+	Compare(hashedPassword, password []byte, salt []byte) error
+}

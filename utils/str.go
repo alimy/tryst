@@ -23,3 +23,26 @@ func Bytes(data string) (res []byte) {
 	}
 	return
 }
+
+// EqualBytes compare b1 == b2
+func EqualBytes(b1, b2 []byte) bool {
+	b1Size, b2Size := len(b1), len(b2)
+	if b1Size != b2Size {
+		return false
+	}
+	return unsafe.String(unsafe.SliceData(b1), b1Size) == unsafe.String(unsafe.SliceData(b2), b2Size)
+}
+
+// CompareBytes compare b1 and b2, 1 if b1>b2, 0 if b1==b2, -1 if b1<b2
+func CompareBytes(b1, b2 []byte) (res int) {
+	s1, s2 := unsafe.String(unsafe.SliceData(b1), len(b1)), unsafe.String(unsafe.SliceData(b2), len(b2))
+	switch {
+	case s1 > s2:
+		res = 1
+	case s1 < s2:
+		res = -1
+	default:
+		res = 0
+	}
+	return
+}
