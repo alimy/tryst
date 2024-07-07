@@ -13,8 +13,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/gansidui/skiplist"
 	"log"
+
+	"github.com/gansidui/skiplist"
 )
 
 type User struct {
