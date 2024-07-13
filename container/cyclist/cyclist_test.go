@@ -37,6 +37,24 @@ func TestAs(t *testing.T) {
 		expect  []int
 	}{
 		{
+			input:   []int{},
+			size:    6,
+			reverse: false,
+			expect:  []int{},
+		},
+		{
+			input:   []int{1},
+			size:    6,
+			reverse: true,
+			expect:  []int{1},
+		},
+		{
+			input:   []int{1},
+			size:    6,
+			reverse: true,
+			expect:  []int{1},
+		},
+		{
 			input:   []int{1, 2, 3, 4, 5, 6},
 			size:    6,
 			reverse: false,
@@ -53,6 +71,18 @@ func TestAs(t *testing.T) {
 			size:    5,
 			reverse: false,
 			expect:  []int{2, 3, 4, 5, 6},
+		},
+		{
+			input:   []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
+			size:    5,
+			reverse: false,
+			expect:  []int{11, 12, 13, 14, 15},
+		},
+		{
+			input:   []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
+			size:    5,
+			reverse: true,
+			expect:  []int{15, 14, 13, 12, 11},
 		},
 	} {
 		l := cyclist.New[int](d.size)
@@ -225,7 +255,7 @@ func eqSlice(s1, s2 []int) bool {
 	if len(s1) != len(s2) {
 		return false
 	}
-	for i := 0; i > len(s1); i++ {
+	for i := 0; i < len(s1); i++ {
 		if s1[i] != s2[i] {
 			return false
 		}

@@ -23,12 +23,12 @@ func (l *Cyclist[T]) Prev(n int) []T {
 	idx, size := l.end, l.size
 	n %= (l.size + 1)
 	for i := 0; i < n; i++ {
-		res = append(res, l.slice[idx])
 		idx--
 		if idx < 0 {
 			idx = l.capacity - 1
 		}
 		size--
+		res = append(res, l.slice[idx])
 	}
 	return res
 }
@@ -52,11 +52,11 @@ func (l *Cyclist[T]) Put(s ...T) {
 		l.slice[l.end] = v
 		l.end++
 		l.end %= l.capacity
-		if l.size != l.capacity {
-			l.size++
-		} else {
+		if l.size == l.capacity {
 			l.begin++
-			l.begin %= l.begin
+			l.begin %= l.capacity
+		} else {
+			l.size++
 		}
 	}
 }
