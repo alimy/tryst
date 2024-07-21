@@ -10,11 +10,13 @@ import (
 
 // Cyclist[T] A Cyclist is an element of a circular list like container/ring in standard library but based on slice.
 type Cyclist[T any] struct {
-	slice    []T
-	capacity int
-	size     int
-	begin    int
-	end      int
+	slice     []T
+	capacity  int
+	size      int
+	begin     int
+	end       int
+	nextIndex func(int) int
+	prevIndex func(int) int
 }
 
 // Prev returns the previous n prev element.
@@ -24,9 +26,7 @@ func (l *Cyclist[T]) Prev(n int) []T {
 	n %= (l.size + 1)
 	for i := 0; i < n; i++ {
 		idx--
-		if idx < 0 {
-			idx = l.capacity - 1
-		}
+		idx = l.prevIndex(idx)
 		size--
 		res = append(res, l.slice[idx])
 	}
@@ -41,7 +41,7 @@ func (l *Cyclist[T]) Next(n int) []T {
 	for i := 0; i < n; i++ {
 		res = append(res, l.slice[idx])
 		idx++
-		idx %= l.capacity
+		idx = l.nextIndex(idx)
 		size--
 	}
 	return res
@@ -51,10 +51,10 @@ func (l *Cyclist[T]) Put(s ...T) {
 	for _, v := range s {
 		l.slice[l.end] = v
 		l.end++
-		l.end %= l.capacity
+		l.end = l.nextIndex(l.end)
 		if l.size == l.capacity {
 			l.begin++
-			l.begin %= l.capacity
+			l.begin = l.nextIndex(l.begin)
 		} else {
 			l.size++
 		}
@@ -63,23 +63,22 @@ func (l *Cyclist[T]) Put(s ...T) {
 
 // Move moves n % l.Len() elements backward (n < 0) or forward (n >= 0) in the cyclist and returns that ring element.
 func (l *Cyclist[T]) Move(n int) (res []T) {
-	res = make([]T, 0, n)
 	if n > 0 {
+		res = make([]T, 0, n)
 		n %= (l.size + 1)
 		for i := 0; i < n; i++ {
 			res = append(res, l.slice[l.begin])
 			l.begin++
-			l.begin %= l.capacity
+			l.begin = l.nextIndex(l.begin)
 			l.size--
 		}
 	} else if n < 0 {
+		res = make([]T, 0, -n)
 		n %= (l.size + 1)
 		for i := n; i < 0; i++ {
-			res = append(res, l.slice[l.end])
 			l.end--
-			if l.end < 0 {
-				l.end = l.capacity - 1
-			}
+			l.end = l.prevIndex(l.end)
+			res = append(res, l.slice[l.end])
 			l.size--
 		}
 	}
@@ -92,7 +91,7 @@ func (l *Cyclist[T]) Do(f func(T)) {
 	for i := 0; i < l.size; i++ {
 		f(l.slice[idx])
 		idx++
-		idx %= l.capacity
+		idx = l.nextIndex(idx)
 	}
 }
 
@@ -117,12 +116,37 @@ func (l *Cyclist[T]) Capacity() int {
 }
 
 // New[T]  creates a cyclist of n(n>0) elements.
-func New[T any](n int) *Cyclist[T] {
+func New[T any](n int) (res *Cyclist[T]) {
 	if n <= 0 {
 		n = 1
 	}
-	return &Cyclist[T]{
+
+	res = &Cyclist[T]{
 		slice:    make([]T, n),
 		capacity: n,
 	}
+
+	// use & operation instead % if capacity == 2^n
+	if n&(n-1) == 0 {
+		mask := n - 1
+		res.nextIndex = func(idx int) int {
+			return idx & mask
+		}
+		res.prevIndex = res.nextIndex
+		return
+	}
+
+	// just use % if capacity != 2^n
+	maxIndex := n - 1
+	res.prevIndex = func(idx int) int {
+		if idx < 0 {
+			return maxIndex
+		}
+		return idx
+	}
+	res.nextIndex = func(idx int) int {
+		return idx % n
+	}
+
+	return
 }

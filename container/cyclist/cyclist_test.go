@@ -84,6 +84,18 @@ func TestAs(t *testing.T) {
 			reverse: true,
 			expect:  []int{15, 14, 13, 12, 11},
 		},
+		{
+			input:   []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+			size:    4,
+			reverse: false,
+			expect:  []int{13, 14, 15, 16},
+		},
+		{
+			input:   []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+			size:    4,
+			reverse: true,
+			expect:  []int{16, 15, 14, 13},
+		},
 	} {
 		l := cyclist.New[int](d.size)
 		l.Put(d.input...)
@@ -129,6 +141,12 @@ func TestPrev(t *testing.T) {
 			n:      2,
 			expect: []int{6, 5},
 		},
+		{
+			input:  []int{1, 2, 3, 4, 5, 6, 7, 8},
+			size:   4,
+			n:      2,
+			expect: []int{8, 7},
+		},
 	} {
 		l := cyclist.New[int](d.size)
 		l.Put(d.input...)
@@ -167,6 +185,34 @@ func TestMove(t *testing.T) {
 			n:      2,
 			expect: []int{4, 5},
 			val:    []int{6},
+		},
+		{
+			input:  []int{1, 2, 3, 4, 5, 6},
+			size:   4,
+			n:      2,
+			expect: []int{3, 4},
+			val:    []int{5, 6},
+		},
+		{
+			input:  []int{1, 2, 3, 4, 5, 6},
+			size:   4,
+			n:      -2,
+			expect: []int{6, 5},
+			val:    []int{3, 4},
+		},
+		{
+			input:  []int{1, 2, 3, 4, 5, 6},
+			size:   3,
+			n:      2,
+			expect: []int{4, 5},
+			val:    []int{6},
+		},
+		{
+			input:  []int{1, 2, 3, 4, 5, 6},
+			size:   3,
+			n:      -2,
+			expect: []int{6, 5},
+			val:    []int{4},
 		},
 	} {
 		l := cyclist.New[int](d.size)
