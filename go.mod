@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/RoaringBitmap/roaring v1.9.4
-	github.com/bytedance/sonic v1.12.2
+	github.com/bytedance/sonic v1.12.3
 	github.com/goccy/go-json v0.10.3
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/json-iterator/go v1.1.12
