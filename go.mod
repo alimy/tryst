@@ -1,6 +1,7 @@
 module github.com/alimy/tryst
 
 go 1.21
+toolchain go1.23.6
 
 require (
 	github.com/RoaringBitmap/roaring v1.9.4
@@ -8,7 +9,7 @@ require (
 	github.com/goccy/go-json v0.10.4
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/json-iterator/go v1.1.12
-	golang.org/x/crypto v0.32.0
+	golang.org/x/crypto v0.35.0
 )
 
 require (
