@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/RoaringBitmap/roaring v1.9.4
-	github.com/bytedance/sonic v1.12.7
+	github.com/bytedance/sonic v1.13.1
 	github.com/goccy/go-json v0.10.4
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/json-iterator/go v1.1.12
@@ -13,8 +13,8 @@ require (
 
 require (
 	github.com/bits-and-blooms/bitset v1.12.0 // indirect
-	github.com/bytedance/sonic/loader v0.2.2 // indirect
-	github.com/cloudwego/base64x v0.1.4 // indirect
+	github.com/bytedance/sonic/loader v0.2.4 // indirect
+	github.com/cloudwego/base64x v0.1.5 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
