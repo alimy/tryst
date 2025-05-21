@@ -1,94 +1,68 @@
-// Copyright 2022 The Go Authors. All rights reserved.
+// Copyright 2009 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
 package sync_test
 
 import (
-	"sync"
+	. "sync"
 	"testing"
-	_ "unsafe"
-
-	isync "github.com/alimy/tryst/sync"
 )
 
-func TestOnceValue(t *testing.T) {
-	calls := 0
-	f := isync.OnceVal(func() int {
-		calls++
-		return calls
-	})
-	allocs := testing.AllocsPerRun(10, func() { f() })
-	value := f()
-	if calls != 1 {
-		t.Errorf("want calls==1, got %d", calls)
+type one int
+
+func (o *one) Increment() {
+	*o++
+}
+
+func run(t *testing.T, once *Once, o *one, c chan bool) {
+	once.Do(func() { o.Increment() })
+	if v := *o; v != 1 {
+		t.Errorf("once failed inside run: %d is not 1", v)
 	}
-	if value != 1 {
-		t.Errorf("want value==1, got %d", value)
+	c <- true
+}
+
+func TestOnce(t *testing.T) {
+	o := new(one)
+	once := new(Once)
+	c := make(chan bool)
+	const N = 10
+	for i := 0; i < N; i++ {
+		go run(t, once, o, c)
 	}
-	if allocs != 0 {
-		t.Errorf("want 0 allocations per call, got %v", allocs)
+	for i := 0; i < N; i++ {
+		<-c
+	}
+	if *o != 1 {
+		t.Errorf("once failed outside run: %d is not 1", *o)
 	}
 }
 
-func TestOnceValues(t *testing.T) {
-	calls := 0
-	f := isync.OnceValsFn(func() (int, int) {
-		calls++
-		return calls, calls + 1
+func TestOncePanic(t *testing.T) {
+	var once Once
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("Once.Do did not panic")
+			}
+		}()
+		once.Do(func() {
+			panic("failed")
+		})
+	}()
+
+	once.Do(func() {
+		t.Fatalf("Once.Do called twice")
 	})
-	allocs := testing.AllocsPerRun(10, func() { f() })
-	v1, v2 := f()
-	if calls != 1 {
-		t.Errorf("want calls==1, got %d", calls)
-	}
-	if v1 != 1 || v2 != 2 {
-		t.Errorf("want v1==1 and v2==2, got %d and %d", v1, v2)
-	}
-	if allocs != 0 {
-		t.Errorf("want 0 allocations per call, got %v", allocs)
-	}
 }
 
-var (
-	onceValue = isync.OnceValFn(func() int { return 42 })
-
-	onceValueOnce  sync.Once
-	onceValueValue int
-)
-
-func doOnceValue() int {
-	onceValueOnce.Do(func() {
-		onceValueValue = 42
-	})
-	return onceValueValue
-}
-
-func BenchmarkOnceValFn(b *testing.B) {
-	// See BenchmarkOnceFunc
-	b.Run("v=Once", func(b *testing.B) {
-		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			if want, got := 42, doOnceValue(); want != got {
-				b.Fatalf("want %d, got %d", want, got)
-			}
-		}
-	})
-	b.Run("v=Global", func(b *testing.B) {
-		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			if want, got := 42, onceValue(); want != got {
-				b.Fatalf("want %d, got %d", want, got)
-			}
-		}
-	})
-	b.Run("v=Local", func(b *testing.B) {
-		b.ReportAllocs()
-		onceValue := isync.OnceValFn(func() int { return 42 })
-		for i := 0; i < b.N; i++ {
-			if want, got := 42, onceValue(); want != got {
-				b.Fatalf("want %d, got %d", want, got)
-			}
+func BenchmarkOnce(b *testing.B) {
+	var once Once
+	f := func() {}
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			once.Do(f)
 		}
 	})
 }

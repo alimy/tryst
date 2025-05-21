@@ -1,44 +1,86 @@
-// Copyright 2025 Michael Li <alimy@gility.net>. All rights reserved.
-// Use of this source code is governed by Apache License 2.0 that
-// can be found in the LICENSE file.
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 
 package sync
 
 import (
 	"sync"
+	"sync/atomic"
 )
 
-type (
-	ValFn[T any]       func() T
-	ValsFn[T1, T2 any] func() (T1, T2)
-)
-
-// OnceValFn returns a function that invokes f only once and returns the value
-// returned by f. The returned function may be called concurrently.
-func OnceValFn[T any](newFn func() T) ValFn[T] {
-	res := newOnceSys(newFn)
-	return res.Val
-}
-
-// OnceValsFn returns a function that invokes f only once and returns the value
-// returned by f. The returned function may be called concurrently.
-func OnceValsFn[T1, T2 any](newFn func() (T1, T2)) ValsFn[T1, T2] {
-	res := newOnceSys2(newFn)
-	return res.Val
-}
-
-// OnceVal returns a function that invokes f only once and returns the value
-// returned by f. The returned function may be called concurrently.
+// Once is an object that will perform exactly one action.
 //
-// If f panics, the returned function will panic with the same value on every call.
-func OnceVal[T any](newFn func() T) ValFn[T] {
-	return sync.OnceValue(newFn)
+// A Once must not be copied after first use.
+//
+// In the terminology of [the Go memory model],
+// the return from f “synchronizes before”
+// the return from any call of once.Do(f).
+//
+// [the Go memory model]: https://go.dev/ref/mem
+type Once struct {
+	_ noCopy
+
+	// done indicates whether the action has been performed.
+	// It is first in the struct because it is used in the hot path.
+	// The hot path is inlined at every call site.
+	// Placing done first allows more compact instructions on some architectures (amd64/386),
+	// and fewer instructions (to calculate offset) on other architectures.
+	done atomic.Uint32
+	m    sync.Mutex
 }
 
-// OnceVals returns a function that invokes f only once and returns the values
-// returned by f. The returned function may be called concurrently.
+// Do calls the function f if and only if Do is being called for the
+// first time for this instance of [Once]. In other words, given
 //
-// If f panics, the returned function will panic with the same value on every call.
-func OnceVals[T1, T2 any](newFn func() (T1, T2)) ValsFn[T1, T2] {
-	return sync.OnceValues(newFn)
+//	var once Once
+//
+// if once.Do(f) is called multiple times, only the first call will invoke f,
+// even if f has a different value in each invocation. A new instance of
+// Once is required for each function to execute.
+//
+// Do is intended for initialization that must be run exactly once. Since f
+// is niladic, it may be necessary to use a function literal to capture the
+// arguments to a function to be invoked by Do:
+//
+//	config.once.Do(func() { config.init(filename) })
+//
+// Because no call to Do returns until the one call to f returns, if f causes
+// Do to be called, it will deadlock.
+//
+// If f panics, Do considers it to have returned; future calls of Do return
+// without calling f.
+func (o *Once) Do(f func()) {
+	// Note: Here is an incorrect implementation of Do:
+	//
+	//	if o.done.CompareAndSwap(0, 1) {
+	//		f()
+	//	}
+	//
+	// Do guarantees that when it returns, f has finished.
+	// This implementation would not implement that guarantee:
+	// given two simultaneous calls, the winner of the cas would
+	// call f, and the second would return immediately, without
+	// waiting for the first's call to f to complete.
+	// This is why the slow path falls back to a mutex, and why
+	// the o.done.Store must be delayed until after f returns.
+
+	if o.done.Load() == 0 {
+		// Outlined slow-path to allow inlining of the fast-path.
+		o.doSlow(f)
+	}
+}
+
+// Reset reset once inner status.
+func (o *Once) Reset() {
+	o.done.Store(0)
+}
+
+func (o *Once) doSlow(f func()) {
+	o.m.Lock()
+	defer o.m.Unlock()
+	if o.done.Load() == 0 {
+		defer o.done.Store(1)
+		f()
+	}
 }
