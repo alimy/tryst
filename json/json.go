@@ -2,14 +2,16 @@
 // Use of this source code is governed by a MIT style
 // license that can be found in the LICENSE file.
 
-//go:build !jsoniter && !go_json && !(sonic && avx && (linux || windows || darwin) && amd64)
-// +build !jsoniter
-// +build !go_json
-// +build !sonic !avx !linux,!windows,!darwin !amd64
+//go:build !jsoniter && !go_json && !(sonic && (linux || windows || darwin))
 
 package json
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
+
+// Package indicates what library is being used for JSON encoding.
+const Package = "encoding/json"
 
 var (
 	// Marshal is exported by gin/json package.

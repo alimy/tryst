@@ -2,15 +2,16 @@
 // Use of this source code is governed by a MIT style
 // license that can be found in the LICENSE file.
 
-//go:build sonic && avx && (linux || windows || darwin) && amd64
-// +build sonic
-// +build avx
-// +build linux windows darwin
-// +build amd64
+//go:build sonic && (linux || windows || darwin)
 
 package json
 
-import "github.com/bytedance/sonic"
+import (
+	"github.com/bytedance/sonic"
+)
+
+// Package indicates what library is being used for JSON encoding.
+const Package = "github.com/bytedance/sonic"
 
 var (
 	json = sonic.ConfigStd

@@ -3,7 +3,6 @@
 // can be found in the LICENSE file.
 
 //go:build !jsoniter
-// +build !jsoniter
 
 package json
 

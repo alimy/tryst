@@ -3,11 +3,15 @@
 // license that can be found in the LICENSE file.
 
 //go:build go_json
-// +build go_json
 
 package json
 
-import json "github.com/goccy/go-json"
+import (
+	json "github.com/goccy/go-json"
+)
+
+// Package indicates what library is being used for JSON encoding.
+const Package = "github.com/goccy/go-json"
 
 var (
 	// Marshal is exported by gin/json package.

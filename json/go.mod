@@ -1,9 +1,9 @@
 module github.com/alimy/tryst/json
 
-go 1.24.1
+go 1.21.0
 
 require (
-	github.com/bytedance/sonic v1.13.1
+	github.com/bytedance/sonic v1.13.2
 	github.com/goccy/go-json v0.10.5
 	github.com/json-iterator/go v1.1.12
 )

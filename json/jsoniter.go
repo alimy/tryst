@@ -3,11 +3,15 @@
 // license that can be found in the LICENSE file.
 
 //go:build jsoniter
-// +build jsoniter
 
 package json
 
-import jsoniter "github.com/json-iterator/go"
+import (
+	jsoniter "github.com/json-iterator/go"
+)
+
+// Package indicates what library is being used for JSON encoding.
+const Package = "github.com/json-iterator/go"
 
 var (
 	json = jsoniter.ConfigCompatibleWithStandardLibrary
