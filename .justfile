@@ -17,7 +17,7 @@ ci: vet && test
 [group("develop")]
 test:
   @echo "Testting code..."
-  @cd {{invocation_directory()}}; go test ./...
+  @cd {{invocation_directory()}}; go test -timeout 30s ./...
 
 [doc("benchmark code")]
 [group("develop")]
@@ -25,6 +25,8 @@ benchmark:
   @echo "Benchmark code..."
   @cd {{invocation_directory()}}; go test -benchmem -bench . .
 
+[doc("vet code")]
+[group("develop")]
 vet:
   @echo "Vetting code..."
   @go vet ./...
