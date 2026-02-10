@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/RoaringBitmap/roaring v1.9.4
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	golang.org/x/crypto v0.43.0
+	golang.org/x/crypto v0.48.0
 )
 
 require (
