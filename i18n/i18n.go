@@ -4,9 +4,7 @@
 
 package i18n
 
-var (
-	_i18nAssets map[string]map[string]string
-)
+var _i18nAssets map[string]map[string]string
 
 var (
 	// Zh alias of Get("zh", ...) function

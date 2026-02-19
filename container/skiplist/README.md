@@ -23,7 +23,7 @@ type User struct {
 	id    string
 }
 
-func (u *User) Less(other interface{}) bool {
+func (u *User) Less(other any) bool {
 	if u.score > other.(*User).score {
 		return true
 	}

@@ -3,3 +3,9 @@
 // can be found in the LICENSE file.
 
 package tryst
+
+// Name and Version info of this library, used for statistics and debug
+const (
+	Name    = "Kitex"
+	Version = "v1.3"
+)

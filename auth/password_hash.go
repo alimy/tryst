@@ -12,9 +12,7 @@ import (
 	"github.com/alimy/tryst/utils"
 )
 
-var (
-	_ HashPasswordProvider = (*hashPasswordProvider)(nil)
-)
+var _ HashPasswordProvider = (*hashPasswordProvider)(nil)
 
 type hashPasswordProvider struct {
 	hashFactor func() hash.Hash

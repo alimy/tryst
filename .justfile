@@ -23,7 +23,7 @@ test:
 [group("develop")]
 benchmark:
   @echo "Benchmark code..."
-  @cd {{invocation_directory()}}; go test -benchmem -bench . .
+  @cd {{invocation_directory()}}; go test -run=NOTEST -benchmem -bench . .
 
 [doc("vet code")]
 [group("develop")]
@@ -35,4 +35,4 @@ vet:
 [group("develop")]
 fmt:
   @echo "Formatting code..."
-  @go fmt ./...
+  @gofumpt -l -w .

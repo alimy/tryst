@@ -8,9 +8,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var (
-	_ PasswordProvider = (*bcryptPasswordProvider)(nil)
-)
+var _ PasswordProvider = (*bcryptPasswordProvider)(nil)
 
 type bcryptPasswordProvider struct {
 	cost int
