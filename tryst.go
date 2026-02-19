@@ -6,6 +6,6 @@ package tryst
 
 // Name and Version info of this library, used for statistics and debug
 const (
-	Name    = "Kitex"
-	Version = "v1.3"
+	Name    = "Tryst"
+	Version = "v1.4"
 )
