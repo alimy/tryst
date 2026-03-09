@@ -1,13 +1,13 @@
 module github.com/alimy/tryst
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/RoaringBitmap/roaring v1.9.4
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.48.0
-	golang.org/x/sync v0.19.0
+	golang.org/x/sync v0.20.0
 	golang.org/x/sys v0.41.0
 )
 
