@@ -172,7 +172,7 @@ func (p *bufferWorkPool) runBufferWorker() {
 					case item := <-p.workBufCh:
 						fnBuf = append(fnBuf, item)
 					case <-idleTimer.C:
-						if p.size.Load() == 0 && len(fnBuf) == 0 {
+						if len(fnBuf) == 0 && p.size.Load() == 0 {
 							return
 						}
 					}
@@ -181,7 +181,7 @@ func (p *bufferWorkPool) runBufferWorker() {
 					case item := <-p.workBufCh:
 						fnBuf = append(fnBuf, item)
 					case <-idleTimer.C:
-						if p.size.Load() == 0 && len(fnBuf) == 0 {
+						if len(fnBuf) == 0 && p.size.Load() == 0 {
 							return
 						}
 					}

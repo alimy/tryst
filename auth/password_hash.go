@@ -20,14 +20,16 @@ type hashPasswordProvider struct {
 
 func (p *hashPasswordProvider) Generate(password []byte, salt []byte) ([]byte, error) {
 	hashFn := p.hashFactor()
+	hashFn.Write(salt)
 	hashFn.Write(password)
-	return hashFn.Sum(salt), nil
+	return hashFn.Sum(nil), nil
 }
 
 func (p *hashPasswordProvider) Compare(hashedPassword, password []byte, salt []byte) error {
 	hashFn := p.hashFactor()
+	hashFn.Write(salt)
 	hashFn.Write(password)
-	if !utils.EqualBytes(hashedPassword, hashFn.Sum(salt)) {
+	if !utils.EqualBytes(hashedPassword, hashFn.Sum(nil)) {
 		return errors.New("incorrect password")
 	}
 	return nil

@@ -446,35 +446,35 @@ func (p *wormPool3[T]) Stop() {
 
 func (p *wormPool[T, R]) do(item *requestItem[T, R]) {
 	if item != nil {
-		resp, err := p.doFn(item.req)
-		item.respFn(item.req, resp, err)
 		defer func() {
 			if err := recover(); err != nil {
-				item.respFn(item.req, resp, fmt.Errorf("do fn occurs panic: %s", err))
+				item.respFn(item.req, *new(R), fmt.Errorf("do fn occurs panic: %s", err))
 			}
 		}()
+		resp, err := p.doFn(item.req)
+		item.respFn(item.req, resp, err)
 	}
 }
 
 func (p *wormPool2[T]) run(item *requestItem2[T]) {
 	if item != nil {
-		item.respFn(item.req, p.runFn(item.req))
 		defer func() {
 			if err := recover(); err != nil {
 				item.respFn(item.req, fmt.Errorf("run fn occurs panic: %s", err))
 			}
 		}()
+		item.respFn(item.req, p.runFn(item.req))
 	}
 }
 
 func (p *wormPool3[T]) exec(item T) {
-	p.execFn(item)
 	defer func() {
 		if err := recover(); err != nil {
 			// TODO: add log
 			// do nothing
 		}
 	}()
+	p.execFn(item)
 }
 
 func (p *wormPool[T, R]) goDo() {
@@ -541,14 +541,14 @@ func WithMaxRequestTempBuf(num int) Option {
 	}
 }
 
-// WithMaxIdelTime set max idle time to custom a worker max wait tile to worker
-func WithMaxIdelTime(d time.Duration) Option {
+// WithMaxIdleTime set max idle time to custom a worker max wait tile to worker
+func WithMaxIdleTime(d time.Duration) Option {
 	return func(opt *gorotinePoolOpt) {
 		opt.maxIdleTime = d
 	}
 }
 
-// WithWorkerHookOpt set wroker hook
+// WithWorkerHookOpt set worker hook
 func WithWorkerHook(h WorkerHook) Option {
 	return func(opt *gorotinePoolOpt) {
 		opt.workerHook = h

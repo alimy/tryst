@@ -64,7 +64,7 @@ func NewAsyncClient(client *http.Client, conf *AsyncClientConf) AsyncClient {
 			gp.WithMinWorker(minWorker),
 			gp.WithMaxRequestBuf(maxRequestBuf),
 			gp.WithMaxRequestTempBuf(maxRequestTempBuf),
-			gp.WithMaxIdelTime(conf.MaxIdleTime),
+			gp.WithMaxIdleTime(conf.MaxIdleTime),
 		),
 	}
 }

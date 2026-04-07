@@ -34,8 +34,9 @@ func OnceFunc(f func()) (func(), func()) {
 				panic(p)
 			}
 		}, func() {
-			once.Reset()
 			valid = false
+			p = nil
+			once.Reset()
 		}
 }
 
@@ -68,8 +69,10 @@ func OnceValue[T any](f func() T) (func() T, func()) {
 			}
 			return result
 		}, func() {
-			once.Reset()
 			valid = false
+			p = nil
+			result = *new(T)
+			once.Reset()
 		}
 }
 
@@ -104,6 +107,9 @@ func OnceValues[T1, T2 any](f func() (T1, T2)) (func() (T1, T2), func()) {
 			return r1, r2
 		}, func() {
 			valid = false
+			p = nil
+			r1 = *new(T1)
+			r2 = *new(T2)
 			once.Reset()
 		}
 }

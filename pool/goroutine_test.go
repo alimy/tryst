@@ -21,7 +21,7 @@ func TestGoroutinePoolOpt(t *testing.T) {
 		WithMinWorker(10),
 		WithMaxRequestBuf(100),
 		WithMaxRequestTempBuf(100),
-		WithMaxIdelTime(60 * time.Second),
+		WithMaxIdleTime(60 * time.Second),
 	} {
 		optFn(&opt)
 	}

@@ -30,7 +30,12 @@ func EqualBytes(b1, b2 []byte) bool {
 	if b1Size != b2Size {
 		return false
 	}
-	return unsafe.String(unsafe.SliceData(b1), b1Size) == unsafe.String(unsafe.SliceData(b2), b2Size)
+	for i := 0; i < b1Size; i++ {
+		if b1[i] != b2[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // CompareBytes compare b1 and b2, 1 if b1>b2, 0 if b1==b2, -1 if b1<b2
